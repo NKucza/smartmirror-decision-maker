@@ -16,6 +16,8 @@ Module.register("smartmirror-decision-maker", {
 	objectdetectionshown: false,
 	gesturerecognitionshown: false,
 
+	timeOfLastFlat : 0,
+
 	defaults: {
 		module_list: [
 			{name : "clock", words : ["clock","uhr"]},
@@ -83,6 +85,20 @@ Module.register("smartmirror-decision-maker", {
 			if (JSON.parse(payload)[0]["ID"] > 0) {
 				//this.sendNotification('smartmirror-TTS-en',"Hello, nice to see you");
 				this.sendNotification('smartmirror-TTS-ger',"Hallo " + JSON.parse(payload)[0]["name"] + ", schön dich wieder zu sehen");
+			}else if (JSON.parse(payload)[0]["ID"] == -1) {
+				//if nodody is in front of the mirror close everything
+				//menu closed..
+				this.sendNotification('MAIN_MENU', 'none');
+				this.mainManuState = this.mainManuStateObj.none;
+				//center display closed..
+				this.sendNotification('CENTER_DISPLAY', 'HIDEALL');
+				this.facerecognitionshown = false;
+				this.objectdetectionshown = false;
+				this.gesturerecognitionshown = false;
+				this.sendNotification("smartmirror-object-detection" + "SetFPS", 5.0);
+				this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
+				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+				
 			}
 		}
 	},
@@ -194,7 +210,7 @@ Module.register("smartmirror-decision-maker", {
 					if (this.gesturerecognitionshown) {
 						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 30.0);
 					} else {
-						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 10.0);
 					} 
 				}else if(transcript.includes('face')||transcript.includes('gesicht')){				
 					this.sendNotification('CENTER_DISPLAY', 'FACE');
@@ -208,6 +224,7 @@ Module.register("smartmirror-decision-maker", {
 					this.sendNotification('CENTER_DISPLAY', 'HIDEALL');
 					this.facerecognitionshown = false;
 					this.objectdetectionshown = false;
+					this.gesturerecognitionshown = false;
 					this.sendNotification("smartmirror-object-detection" + "SetFPS", 5.0);
 					this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
 					this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
@@ -243,7 +260,24 @@ Module.register("smartmirror-decision-maker", {
 	process_gesture: function(detection_string){
 		console.log("[" + this.name + "] " + "gesture detected: " + detection_string);
 		var parsed_detection = JSON.parse(detection_string)
-		this.sendNotification('MAIN_MENU_SELECT', 0);
-		
+		if (parsed_detection["name"] === "point_right" || parsed_detection["name"] === "one_right" ){
+			var center = parsed_detection["center"]
+			this.sendNotification('MAIN_MENU_SELECT', center[0]);
+		}else if ((parsed_detection["name"] === "flat_right")){
+			var d = new Date();
+			this.timeOfLastFlat = d.getTime();
+		}else if ((parsed_detection["name"] === "fist_right")){
+			var d = new Date();			
+			if(d.getTime() - this.timeOfLastFlat < 5000){
+				this.sendNotification('MAIN_MENU_CLICK_SELECTED');
+				this.timeOfLastFlat = 0;
+			}else{
+			console.log("zu langsam! : "  + d.getTime() + " " + this.timeOfLastFlat  );
+			}
+		}else if (parsed_detection["name"] === "thumbs_up_right" || parsed_detection["name"] === "thumbs_up_left"){
+			this.sendNotification('MAIN_MENU_UP');
+		}else if (parsed_detection["name"] === "thumbs_down_right" || parsed_detection["name"] === "thumbs_down_left"){
+			this.sendNotification('MAIN_MENU_DOWN');
+		}
 	}
 });
