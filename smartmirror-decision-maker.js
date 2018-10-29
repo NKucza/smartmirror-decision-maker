@@ -31,7 +31,7 @@ Module.register("smartmirror-decision-maker", {
 			{name : "smartmirror-mensa-plan", words : ["mensa"]},
 			{name : "smartmirror-main-menu", words : ["menu"]},
 			{name : "smartmirror-center-display", words : ["centerdisplay"]},
-			{name : "MMM-Stock", words : ["stock"]}
+			{name : "smartmirror-bivital", words: ["bivital"]}
 		]
 	},
 
@@ -83,8 +83,11 @@ Module.register("smartmirror-decision-maker", {
 			//console.log("test " + JSON.parse(payload)[0]["ID"])
 			this.adjustViewLogin((JSON.parse(payload))[0]);
 			if (JSON.parse(payload)[0]["ID"] > 0) {
+				this.sendSocketNotification("GREET_USER",JSON.parse(payload)[0]["ID"])
 				//this.sendNotification('smartmirror-TTS-en',"Hello, nice to see you");
 				this.sendNotification('smartmirror-TTS-ger',"Hallo " + JSON.parse(payload)[0]["name"] + ", schön dich wieder zu sehen");
+				this.sendNotification("SHOW_ALERT", {type: "notification", message: "Hallo " + JSON.parse(payload)[0]["name"] + ", schön dich wieder zu sehen"});
+				//this.sendNotification("SHOW_ALERT", {type: "notification", message: this.translate("message").replace("%person", this.current_user), title: this.translate("title")});
 			}else if (JSON.parse(payload)[0]["ID"] == -1) {
 				//if nodody is in front of the mirror close everything
 				//menu closed..

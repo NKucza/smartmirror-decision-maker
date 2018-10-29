@@ -14,7 +14,7 @@ module.exports = NodeHelper.create({
 		});
 		this.con.connect(function(err) {
  			if (err) throw err;
-  			console.log("Connected!");
+  			console.log("Connected to mysql!");
 			
 	//		con.query("select * from mydb.user;" , function (err, result, fields) {
 	//		//con.query("select * from mydb.user;", function (err, result, fields) {
@@ -37,7 +37,12 @@ module.exports = NodeHelper.create({
 				if (err) throw err;
 				self.sendSocketNotification('LOGGIN_USER_INFOS',JSON.stringify(result));
 			});
-    	}
+    	} /* else if(notification === 'GREET_USER') {
+			this.con.query("select * from mydb.user where ID = " + payload + " AND ID = user_ID", function (err, result, fields)
+			var name = result[0]["name"];
+			this.con.query("select * from mydb.language", function (err, result, fields)
+			console.log(result);
+		} */
   	}
 
 });
