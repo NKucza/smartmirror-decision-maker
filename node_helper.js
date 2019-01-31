@@ -9,7 +9,7 @@ module.exports = NodeHelper.create({
 	setup: function () {
 		this.con = mysql.createConnection({
   			host: "localhost",
-  			user: "smart-mirror",
+  			user: "smartmirror",
   			password: "Sm4rt-M1rr0r"
 		});
 		this.con.connect(function(err) {
@@ -37,12 +37,19 @@ module.exports = NodeHelper.create({
 				if (err) throw err;
 				self.sendSocketNotification('LOGGIN_USER_INFOS',JSON.stringify(result));
 			});
-    	} /* else if(notification === 'GREET_USER') {
-			this.con.query("select * from mydb.user where ID = " + payload + " AND ID = user_ID", function (err, result, fields)
-			var name = result[0]["name"];
-			this.con.query("select * from mydb.language", function (err, result, fields)
-			console.log(result);
-		} */
+    	}else if(notification === 'GREET_USER') {
+			this.con.query("select " + payload[0] + " from mydb.greetings", function (err, result, fields) {
+				var min=0; 
+    			var max=result.length -1;  
+    			var random =Math.floor(Math.random() * (+max - +min)) + +min;
+
+				
+				var greeting =(result[random][payload[0]]).replace("USER",payload[1]);
+				//console.log("Greet with: " + greeting);
+				self.sendSocketNotification('GREET_USER_RESULT',[payload[0],greeting]);
+
+			});
+		}
   	}
 
 });

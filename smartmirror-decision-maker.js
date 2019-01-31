@@ -17,6 +17,8 @@ Module.register("smartmirror-decision-maker", {
 	gesturerecognitionshown: false,
 
 	timeOfLastFlat : 0,
+	timeOFLastGreet: 0,
+	timebetweenGreets: 50000,
 
 	defaults: {
 		module_list: [
@@ -31,7 +33,8 @@ Module.register("smartmirror-decision-maker", {
 			{name : "smartmirror-mensa-plan", words : ["mensa"]},
 			{name : "smartmirror-main-menu", words : ["menu"]},
 			{name : "smartmirror-center-display", words : ["centerdisplay"]},
-			{name : "smartmirror-bivital", words: ["bivital"]}
+			{name : "smartmirror-bivital", words: ["bivital"]},
+			{name : "MMM-SoccerLiveScore", words: ["soccer"]}
 		]
 	},
 
@@ -79,15 +82,17 @@ Module.register("smartmirror-decision-maker", {
 	// Override socket notification handler.
 	socketNotificationReceived: function(notification, payload) {
 		if(notification === 'LOGGIN_USER_INFOS') {
-			//console.log("[" + this.name + "] " + "User data received: " + JSON.stringify(JSON.parse(payload)));	
-			//console.log("test " + JSON.parse(payload)[0]["ID"])
+			//console.log("[" + this.name + "] " + "User data received: " + JSON.stringify(JSON.parse(payload)[0]["language"]));	
+			//console.log("test " + JSON.parse(payload)[0])
 			this.adjustViewLogin((JSON.parse(payload))[0]);
 			if (JSON.parse(payload)[0]["ID"] > 0) {
-				this.sendSocketNotification("GREET_USER",JSON.parse(payload)[0]["ID"])
+				
 				//this.sendNotification('smartmirror-TTS-en',"Hello, nice to see you");
-				this.sendNotification('smartmirror-TTS-ger',"Hallo " + JSON.parse(payload)[0]["name"] + ", schön dich wieder zu sehen");
-				this.sendNotification("SHOW_ALERT", {type: "notification", message: "Hallo " + JSON.parse(payload)[0]["name"] + ", schön dich wieder zu sehen"});
-				//this.sendNotification("SHOW_ALERT", {type: "notification", message: this.translate("message").replace("%person", this.current_user), title: this.translate("title")});
+				var d = new Date();
+				if(d.getTime() - this.timeOFLastGreet > this.timebetweenGreets ){
+					this.sendSocketNotification("GREET_USER",[JSON.parse(payload)[0]["language"],JSON.parse(payload)[0]["name"]])
+					this.timeOFLastGreet = d.getTime();   
+				}   			
 			}else if (JSON.parse(payload)[0]["ID"] == -1) {
 				//if nodody is in front of the mirror close everything
 				//menu closed..
@@ -98,11 +103,20 @@ Module.register("smartmirror-decision-maker", {
 				this.facerecognitionshown = false;
 				this.objectdetectionshown = false;
 				this.gesturerecognitionshown = false;
-				this.sendNotification("smartmirror-object-detection" + "SetFPS", 5.0);
+				this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
 				this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
 				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
 				
 			}
+		}else if(notification === 'GREET_USER_RESULT'){
+			if (payload[0] == "de")
+				this.sendNotification('smartmirror-TTS-ger',payload[1]);
+			else if (payload[0] == "en")
+				this.sendNotification('smartmirror-TTS-en',payload[1]);
+
+			this.sendNotification("SHOW_ALERT", {type: "notification", message: payload[1]});
+
+
 		}
 	},
 
@@ -205,7 +219,7 @@ Module.register("smartmirror-decision-maker", {
 					if (this.objectdetectionshown) {
 						this.sendNotification("smartmirror-object-detection" + "SetFPS", 30.0);
 					} else {
-						this.sendNotification("smartmirror-object-detection" + "SetFPS", 5.0);
+						this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
 					} 
 				}else if(transcript.includes('gesture')||transcript.includes('hand')){				
 					this.sendNotification('CENTER_DISPLAY', 'GESTURE');
@@ -213,7 +227,7 @@ Module.register("smartmirror-decision-maker", {
 					if (this.gesturerecognitionshown) {
 						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 30.0);
 					} else {
-						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 10.0);
+						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
 					} 
 				}else if(transcript.includes('face')||transcript.includes('gesicht')){				
 					this.sendNotification('CENTER_DISPLAY', 'FACE');
@@ -228,7 +242,7 @@ Module.register("smartmirror-decision-maker", {
 					this.facerecognitionshown = false;
 					this.objectdetectionshown = false;
 					this.gesturerecognitionshown = false;
-					this.sendNotification("smartmirror-object-detection" + "SetFPS", 5.0);
+					this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
 					this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
 					this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
 				}
