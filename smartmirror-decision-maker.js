@@ -4,8 +4,11 @@ Module.register("smartmirror-decision-maker", {
 		none: 0,
 		main: 1,
 		camera:2,
-		application:3,
-		preferences:4,
+		augmentations:3,
+		messevideo:4,
+		application:5,
+		preferences:6,
+		user_settings:7
 	},
 
 	mainManuState: 0,
@@ -15,6 +18,9 @@ Module.register("smartmirror-decision-maker", {
 	facerecognitionshown: false,
 	objectdetectionshown: false,
 	gesturerecognitionshown: false,
+	aiartmirrorshown: false,
+
+	speechrec_aktiv: false,
 
 	timeOfLastFlat : 0,
 	timeOFLastGreet: 0,
@@ -35,7 +41,8 @@ Module.register("smartmirror-decision-maker", {
 			{name : "smartmirror-center-display", words : ["centerdisplay"]},
 			{name : "smartmirror-bivital", words: ["bivital"]},
 			{name : "MMM-SoccerLiveScore", words: ["soccer"]}
-		]
+		],
+		speechrec_hotword: ["jarvis","smartmirror"]
 	},
 
 	start: function() {
@@ -45,6 +52,9 @@ Module.register("smartmirror-decision-maker", {
 		console.log("[" + this.name + "] " + "sending MAIN_MENU: none");
 		this.sendNotification('MAIN_MENU', 'none');
 		this.sendSocketNotification('CONFIG', this.config);	
+		//config.language = "de";
+		//Translator.loadCoreTranslations(config.language);
+
 	},
 
 	notificationReceived: function(notification, payload, sender) {
@@ -76,6 +86,18 @@ Module.register("smartmirror-decision-maker", {
 		}else if(notification === 'GESTURE_DETECTED') {
 			//var parsed_message = JSON.parse(payload)
 			this.process_gesture(payload);
+		}else if (notification === 'HOTWORD_TRIGGERED') {
+			var wordIncluded = false;
+			this.config.speechrec_hotword.forEach(function(element) {
+				if (payload.includes(element)){
+					wordIncluded = true;
+				}
+			});
+			if (wordIncluded){
+				this.sendNotification('SPEECHREC_AKTIV',true);
+				this.speechrec_aktiv = true;
+				setTimeout(() => {this.disable_speechrec();}, 10000);				
+			}
 		}
 	},
 
@@ -103,9 +125,13 @@ Module.register("smartmirror-decision-maker", {
 				this.facerecognitionshown = false;
 				this.objectdetectionshown = false;
 				this.gesturerecognitionshown = false;
+				this.aiartmirrorshown = false;
+				///this.sendNotification('CENTER_DISPLAY', 'TOGGLE');
+
 				this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
 				this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
 				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+				this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
 				
 			}
 		}else if(notification === 'GREET_USER_RESULT'){
@@ -120,12 +146,35 @@ Module.register("smartmirror-decision-maker", {
 		}
 	},
 
-	adjustViewLogin: function(config){
+	adjustViewLogin: function(user_config){
+		var self = this;
+		/*if(config.language != user_config.language){
+			config.language = user_config.language;
+			Translator.coreTranslations = {},
+			Translator.coreTranslationsFallback = {},
+			Translator.translations = {},
+			Translator.translationsFallback = {},
+			Translator.loadCoreTranslations(config.language);
+			
+				
+			this.config.module_list.forEach(function(element) {
+				for(var key in user_config){
+					if(element.words.includes(key)){
+						MM.getModules().withClass(element.name).enumerate(function(module) {
+						//	console.log("[" + self.name + "] update dom from: " + element.name);
+							module.loadTranslations(function() {});
+							module.updateDom(module,1);	
+						});
+					}
+				}
+			});
+		} */
+
 		this.config.module_list.forEach(function(element) {
-			for(var key in config){
+			for(var key in user_config){
 				if(element.words.includes(key)){
 					MM.getModules().withClass(element.name).enumerate(function(module) {
-					if(config[key]) {
+					if(user_config[key]) {
 						if (module.hidden)
 							module.show(1000, function() {Log.log(module.name + ' is shown.');}, {lockString: "lockString"});
 					}else{
@@ -191,9 +240,15 @@ Module.register("smartmirror-decision-maker", {
 				}
 
 			}else if(this.mainManuState === this.mainManuStateObj.main){
-				if(transcript.includes('camera')||transcript.includes('kamera')||transcript.includes('demonstration')){				
+				if(transcript.includes('camera')||transcript.includes('kamera')||transcript.includes('demonstration')||transcript.includes('detections')){				
 					this.sendNotification('MAIN_MENU', 'camera');
 					this.mainManuState = this.mainManuStateObj.camera;
+				}else if(transcript.includes('image')||transcript.includes('augmentations')){				
+					this.sendNotification('MAIN_MENU', 'augmentations');
+					this.mainManuState = this.mainManuStateObj.augmentations;
+				}else if(transcript.includes('messe')||transcript.includes('video')||transcript.includes('messevideo')){				
+					this.sendNotification('MAIN_MENU', 'messevideo');
+					this.mainManuState = this.mainManuStateObj.messevideo;
 				}else if(transcript.includes('application')||transcript.includes('anwendung')){				
 					this.sendNotification('MAIN_MENU', 'application');
 					this.mainManuState = this.mainManuStateObj.application;
@@ -243,8 +298,36 @@ Module.register("smartmirror-decision-maker", {
 					this.objectdetectionshown = false;
 					this.gesturerecognitionshown = false;
 					this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
+					this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
 					this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
 					this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+					}
+			}else if(this.mainManuState === this.mainManuStateObj.augmentations){
+				if(transcript.includes('back')||transcript.includes('zurück')){		
+					this.sendNotification('MAIN_MENU', 'menu');
+					this.mainManuState = this.mainManuStateObj.main;
+				}else if(transcript.includes('aiartmiror')||transcript.includes('ai')||transcript.includes('mirror')||transcript.includes('art')) {
+					this.sendNotification('CENTER_DISPLAY', 'STYLE_TRANSFERE');
+					this.aiartmirrorshown = ! this.aiartmirrorshown;
+					if (this.aiartmirrorshown) {
+						this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 30.0);
+					} else {
+						this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
+					}
+				}else if(transcript.includes('randomsytle')) {
+
+				}else if(transcript.includes('nextsytle')) {
+
+				}else if(transcript.includes('prevsytle')) {
+
+				}else if(transcript.includes('sourcesytle')) {
+					this.sendNotification('smartmirror-ai-art-mirror','DISP_SOURCE');
+
+				}
+			}else if(this.mainManuState === this.mainManuStateObj.messevideo){
+				if(transcript.includes('back')||transcript.includes('zurück')){				
+					this.sendNotification('MAIN_MENU', 'menu');
+					this.mainManuState = this.mainManuStateObj.main;
 				}
 			}else if(this.mainManuState === this.mainManuStateObj.application){
 				if(transcript.includes('back')||transcript.includes('zurück')){				
@@ -269,8 +352,17 @@ Module.register("smartmirror-decision-maker", {
 				if(transcript.includes('back')||transcript.includes('zurück')){				
 					this.sendNotification('MAIN_MENU', 'menu');
 					this.mainManuState = this.mainManuStateObj.main;
+				} else if(transcript.includes('user')){
+					this.sendNotification('MAIN_MENU', 'user_settings');
+					this.mainManuState = this.mainManuStateObj.user_settings;
+				}
+			}else if(this.mainManuState === this.mainManuStateObj.user_settings){
+				if(transcript.includes('back')||transcript.includes('zurück')){				
+					this.sendNotification('MAIN_MENU', 'menu');
+					this.mainManuState = this.mainManuStateObj.preferences;
 				}
 			}
+
 		}
 	},
 
@@ -296,5 +388,10 @@ Module.register("smartmirror-decision-maker", {
 		}else if (parsed_detection["name"] === "thumbs_down_right" || parsed_detection["name"] === "thumbs_down_left"){
 			this.sendNotification('MAIN_MENU_DOWN');
 		}
+	},
+
+	disable_speechrec: function(){
+		this.sendNotification('SPEECHREC_AKTIV',false);
+		this.speechrec_aktiv = false;	
 	}
 });
