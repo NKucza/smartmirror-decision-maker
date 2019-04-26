@@ -1,3 +1,13 @@
+/**
+ * @file smartmirror-decision-maker.js
+ *
+ * @author nkucza
+ * @license MIT
+ *
+ * @see  https://github.com/NKucza/smartmirror-decision-maker
+ */
+
+
 Module.register("smartmirror-decision-maker", {
 
 	mainManuStateObj: {
