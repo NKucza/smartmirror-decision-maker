@@ -35,6 +35,7 @@ Module.register("smartmirror-decision-maker", {
 			{name : "weatherforecast", words : ["weather","wetter"]},
 			{name : "currentweather", words : ["weather","wetter"]},
 			{name : "newsfeed", words : ["news feed" , "newsfeed"]},
+			{name : "MMM-SimpleLogo", words : ["legato-logo"]},
 			{name : "MMM-PublicTransportHafas", words : ["transportation"]},
 			{name : "smartmirror-mensa-plan", words : ["mensa"]},
 			{name : "smartmirror-main-menu", words : ["menu"]},
@@ -108,7 +109,7 @@ Module.register("smartmirror-decision-maker", {
 			//console.log("test " + JSON.parse(payload)[0])
 			this.adjustViewLogin((JSON.parse(payload))[0]);
 			if (JSON.parse(payload)[0]["ID"] > 0) {
-				
+				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 15.0);
 				//this.sendNotification('smartmirror-TTS-en',"Hello, nice to see you");
 				var d = new Date();
 				if(d.getTime() - this.timeOFLastGreet > this.timebetweenGreets ){
@@ -130,8 +131,9 @@ Module.register("smartmirror-decision-maker", {
 
 				this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
 				this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
-				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
-				this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
+				this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 1.0);
+				this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 1.0);
+				setTimeout(() => {this.start_idle_ai_mirror_art();}, 30000);	
 				
 			}
 		}else if(notification === 'GREET_USER_RESULT'){
@@ -148,6 +150,12 @@ Module.register("smartmirror-decision-maker", {
 
 	adjustViewLogin: function(user_config){
 		var self = this;
+		if(this.aiartmirrorshown == true){
+			this.sendNotification('CENTER_DISPLAY', 'STYLE_TRANSFERE');
+			this.aiartmirrorshown = false;
+			this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 1.0);
+
+		}
 		/*if(config.language != user_config.language){
 			config.language = user_config.language;
 			Translator.coreTranslations = {},
@@ -274,15 +282,15 @@ Module.register("smartmirror-decision-maker", {
 					if (this.objectdetectionshown) {
 						this.sendNotification("smartmirror-object-detection" + "SetFPS", 30.0);
 					} else {
-						this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
+						this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0)
 					} 
 				}else if(transcript.includes('gesture')||transcript.includes('hand')){				
 					this.sendNotification('CENTER_DISPLAY', 'GESTURE');
 					this.gesturerecognitionshown = !(this.gesturerecognitionshown);
 					if (this.gesturerecognitionshown) {
-						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 30.0);
+						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 15.0);
 					} else {
-						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+						this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 15.0);
 					} 
 				}else if(transcript.includes('face')||transcript.includes('gesicht')){				
 					this.sendNotification('CENTER_DISPLAY', 'FACE');
@@ -298,9 +306,9 @@ Module.register("smartmirror-decision-maker", {
 					this.objectdetectionshown = false;
 					this.gesturerecognitionshown = false;
 					this.sendNotification("smartmirror-object-detection" + "SetFPS", 1.0);
-					this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
+					this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 1.0);
 					this.sendNotification("smartmirror-facerecognition" + "SetFPS", 5.0);
-					this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 5.0);
+					this.sendNotification("smartmirror-gesture-recognition" + "SetFPS", 15.0);
 					}
 			}else if(this.mainManuState === this.mainManuStateObj.augmentations){
 				if(transcript.includes('back')||transcript.includes('zurück')){		
@@ -312,14 +320,14 @@ Module.register("smartmirror-decision-maker", {
 					if (this.aiartmirrorshown) {
 						this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 30.0);
 					} else {
-						this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 0.5);
+						this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 1.0);
 					}
 				}else if(transcript.includes('randomsytle')) {
-
+					this.sendNotification('smartmirror-ai-art-mirror','RANDOM_STYLE');
 				}else if(transcript.includes('nextsytle')) {
-
+					this.sendNotification('smartmirror-ai-art-mirror','NEXT_STYLE');
 				}else if(transcript.includes('prevsytle')) {
-
+					this.sendNotification('smartmirror-ai-art-mirror','PREV_STYLE');
 				}else if(transcript.includes('sourcesytle')) {
 					this.sendNotification('smartmirror-ai-art-mirror','DISP_SOURCE');
 
@@ -370,12 +378,12 @@ Module.register("smartmirror-decision-maker", {
 		console.log("[" + this.name + "] " + "gesture detected: " + detection_string);
 		var parsed_detection = JSON.parse(detection_string)
 		if (parsed_detection["name"] === "point_right" || parsed_detection["name"] === "one_right" ){
-			var center = parsed_detection["center"]
-			this.sendNotification('MAIN_MENU_SELECT', center[0]);
+			//var center = parsed_detection["center"]
+			//this.sendNotification('MAIN_MENU_SELECT', center[0]);
 		}else if ((parsed_detection["name"] === "flat_right")){
 			var d = new Date();
 			this.timeOfLastFlat = d.getTime();
-		}else if ((parsed_detection["name"] === "fist_right")){
+		}else if ((parsed_detection["name"] === "fist_right" || parsed_detection["name"] === "point_right")){
 			var d = new Date();			
 			if(d.getTime() - this.timeOfLastFlat < 5000){
 				this.sendNotification('MAIN_MENU_CLICK_SELECTED');
@@ -393,5 +401,18 @@ Module.register("smartmirror-decision-maker", {
 	disable_speechrec: function(){
 		this.sendNotification('SPEECHREC_AKTIV',false);
 		this.speechrec_aktiv = false;	
-	}
+	},
+
+	start_idle_ai_mirror_art: function(){
+	 	 if(this.currentuserid == -1) {
+		 if (this.aiartmirrorshown == false){
+		MM.getModules().withClass("smartmirror-center-display").enumerate(function(module) {
+			module.show(1000, function() {Log.log(module.name + ' is shown.');}, {lockString: "lockString"});
+		});
+		this.sendNotification('CENTER_DISPLAY', 'STYLE_TRANSFERE');
+		this.aiartmirrorshown = true;
+		this.sendNotification("smartmirror-ai-art-mirror_SetFPS", 30.0);
+		}
+		} 
+	} 
 });
